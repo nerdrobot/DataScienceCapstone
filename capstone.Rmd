@@ -1,0 +1,188 @@
+---
+title: "Senior Capstone"
+author: "Hassan Rao"
+date: "2/24/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+library(ISLR)
+library(mosaic)
+library(tidyverse)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(MASS)
+library(gbm)
+```
+
+
+
+```{r}
+str(Avalanche_Project_Sheet1)
+```
+
+## Classification Trees
+
+```{r}
+set.seed(123)
+colnames(Avalanche_Project_Sheet1) <- make.names(colnames(Avalanche_Project_Sheet1))
+train_rows <- createDataPartition(Avalanche_Project_Sheet1$uac, p = 0.8, list = FALSE)
+train_avalanche <- Avalanche_Project_Sheet1[train_rows, ]
+test_avalanche <- Avalanche_Project_Sheet1[-train_rows, ]
+```
+
+```{r}
+names(Avalanche_Project_Sheet1)
+```
+
+```{r}
+avalanche_fit <- train(uac ~ . - date, data = train_avalanche,
+                      method = "rpart")
+```
+
+```{r}
+avalanche_fit
+```
+```{r}
+#tuning with different cp values
+
+grid <- data.frame(cp = seq(from = 0, to = 0.25, by = 0.01))
+grid
+
+avalanche_fit2 <- train(uac ~ . - date, data = train_avalanche,
+                      tuneGrid = grid,
+                      method = "rpart")
+avalanche_fit2
+
+```
+```{r}
+ggplot(avalanche_fit2)
+
+
+```
+```{r}
+#final model has the best cp value
+avalanche_model <- avalanche_fit2$finalModel
+```
+
+```{r}
+prp(avalanche_model)
+```
+```{r}
+#rpart.plot(avalanche_model)
+rpart.plot(avalanche_model,box.palette = "blue")
+```
+```{r}
+contrasts(train_avalanche$uac)
+
+```
+
+
+```{r}
+tally( ~ uac, data = train_avalanche, margins = TRUE)
+```
+
+## Regression Tree
+
+```{r}
+set.seed(123)
+train_rows2 <- createDataPartition(Avalanche_Project_Sheet1$uac, p = 0.5, list = FALSE)
+train_avalanche2 <- Avalanche_Project_Sheet1[train_rows2, ]
+test_avalanche2 <- Avalanche_Project_Sheet1[-train_rows2, ]
+Avalanche_fit <- train(uac ~ . - date, data = train_avalanche2,
+                    tuneGrid = grid,
+                    method = "rpart")
+Avalanche_fit
+```
+```{r}
+ggplot(Avalanche_fit)
+```
+
+```{r}
+Avalanche_model <- Avalanche_fit$finalModel
+rpart.plot(Avalanche_model, box.palette = "green")
+```
+
+```{r}
+
+```
+
+```{r}
+preds_Avalanche <- predict(Avalanche_fit, newdata = test_avalanche2)
+postResample(preds_Avalanche, test_avalanche2$uac)
+```
+
+
+## Bagging and Random Forests
+
+```{r}
+set.seed(123)
+Avalanche_fit_rf <- train(uac ~ ., data = train_avalanche2,
+                       method = "rf",
+                       trControl = trainControl(method = "none"),
+                       tuneGrid = data.frame(mtry = 9))
+```
+```{r}
+preds_Avalanche_rf <- predict(Avalanche_fit_rf, newdata = test_avalanche2)
+postResample(preds_Avalanche_rf, test_avalanche2$uac)
+```
+
+```{r}
+set.seed(123)
+Avalanche_fit_rf2 <- train(uac ~ ., data = train_avalanche2,
+                        method = "rf",
+                        trControl = trainControl(method = "none"),
+                        tuneGrid = data.frame(mtry = 9),
+                        ntree = 25)
+preds_Avalanche_rf2 <- predict(Avalanche_fit_rf2, newdata = test_avalanche2)
+postResample(preds_Avalanche_rf2, test_avalanche2$uac)
+```
+
+```{r}
+set.seed(123)
+Avalanche_fit_rf3 <- train(uac ~ ., data = train_avalanche2,
+                        method = "rf",
+                        trControl = trainControl(method = "none"),
+                        tuneGrid = data.frame(mtry = 6),
+                        importance = TRUE)
+preds_Avalanche_rf3 <- predict(Avalanche_fit_rf3, newdata = test_avalanche2)
+postResample(preds_Avalanche_rf3, test_avalanche2$uac)
+
+```
+
+```{r}
+#Using the varImp function, we can view the importance of each variable.
+varImp(Avalanche_fit_rf3)
+```
+
+```{r}
+#The numbers are scaled so that the largest is 100. If you don’t want this behavior, you can call varImp with the argument scale = FALSE.
+varImp(Avalanche_fit_rf3, scale = FALSE)
+```
+```{r}
+ggplot(varImp(Avalanche_fit_rf3, scale = FALSE))
+```
+
+## Boosting
+
+```{r}
+#Avlanche_fit_boost <-  train(uac ~ ., data = train_avalanche2,
+#                           method = "gbm",
+#                           trControl = trainControl(method = "none"),
+#                           tuneGrid = data.frame(n.trees = 1000,
+#                                                 interaction.depth = 3,
+#                                                 shrinkage = 0.001,
+#                                                 n.minobsinnode = 10),
+#                           verbose = FALSE)
+```
+
+```{r}
+
+```
