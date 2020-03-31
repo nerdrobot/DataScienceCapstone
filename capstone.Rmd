@@ -5,13 +5,16 @@ date: "2/24/2020"
 output: html_document
 ---
 
+
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## Libraries
 
 ```{r}
+library(readr)
 library(ISLR)
 library(mosaic)
 library(tidyverse)
@@ -20,26 +23,42 @@ library(rpart)
 library(rpart.plot)
 library(MASS)
 library(gbm)
+library(readr)
 ```
 
 
+## Import file
 
 ```{r}
-str(Avalanche_Project_Sheet1)
+dataSet <- read_csv("Avalanche Project - Sheet1.csv", 
+    col_types = cols(criricalLoading = col_factor(levels = c("0","1")), 
+                     criticalWindLoading = col_factor(levels = c("0","1")), 
+                     date = col_date(format = "%m/%d/%Y"), 
+                     highTemp = col_integer(), 
+                    psp = col_factor(levels = c("0", "1")), 
+                    recentSnow = col_factor(levels = c("0", "1")), 
+                    recentWindLoading = col_factor(levels = c("0", "1")), 
+                    slabAvalanche = col_factor(levels = c("0","1")),
+                    uac = col_factor(levels = c("1", "2", "3", "4"))))
+View(dataSet)
+```
+
+```{r}
+str(dataSet)
 ```
 
 ## Classification Trees
 
 ```{r}
 set.seed(123)
-colnames(Avalanche_Project_Sheet1) <- make.names(colnames(Avalanche_Project_Sheet1))
-train_rows <- createDataPartition(Avalanche_Project_Sheet1$uac, p = 0.8, list = FALSE)
-train_avalanche <- Avalanche_Project_Sheet1[train_rows, ]
-test_avalanche <- Avalanche_Project_Sheet1[-train_rows, ]
+colnames(dataSet) <- make.names(colnames(dataSet))
+train_rows <- createDataPartition(dataSet$uac, p = 0.8, list = FALSE)
+train_avalanche <- dataSet[train_rows, ]
+test_avalanche <- dataSet[-train_rows, ]
 ```
 
 ```{r}
-names(Avalanche_Project_Sheet1)
+names(dataSet)
 ```
 
 ```{r}
@@ -93,9 +112,9 @@ tally( ~ uac, data = train_avalanche, margins = TRUE)
 
 ```{r}
 set.seed(123)
-train_rows2 <- createDataPartition(Avalanche_Project_Sheet1$uac, p = 0.5, list = FALSE)
-train_avalanche2 <- Avalanche_Project_Sheet1[train_rows2, ]
-test_avalanche2 <- Avalanche_Project_Sheet1[-train_rows2, ]
+train_rows2 <- createDataPartition(dataSet$uac, p = 0.5, list = FALSE)
+train_avalanche2 <- dataSet[train_rows2, ]
+test_avalanche2 <- dataSet[-train_rows2, ]
 Avalanche_fit <- train(uac ~ . - date, data = train_avalanche2,
                     tuneGrid = grid,
                     method = "rpart")
