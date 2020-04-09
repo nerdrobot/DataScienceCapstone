@@ -42,6 +42,11 @@ dataSet <- read_csv("Avalanche Project - Sheet1.csv",
                     uac = col_factor(levels = c("1", "2", "3", "4"))))
 View(dataSet)
 ```
+### Removing the date column
+
+```{r}
+within(dataSet, rm(date))
+```
 
 ```{r}
 str(dataSet)
