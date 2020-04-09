@@ -134,9 +134,6 @@ Avalanche_model <- Avalanche_fit$finalModel
 rpart.plot(Avalanche_model, box.palette = "green")
 ```
 
-```{r}
-
-```
 
 ```{r}
 preds_Avalanche <- predict(Avalanche_fit, newdata = test_avalanche2)
@@ -207,6 +204,71 @@ ggplot(varImp(Avalanche_fit_rf3, scale = FALSE))
 #                           verbose = FALSE)
 ```
 
+
+
+## Danger Rator function 
+
 ```{r}
+dang<- function(rs, rw, ht, cl, cw, sa, psp){
+  returnvalue = 0
+  
+  if(rs==0 & rw==0 & ht<30 & cl==0 & cw==0 & sa==0 & psp==0){
+    return(2)
+  }
+  else if(cl==1 | ht>=30){
+    return(4)
+    
+  }
+  else if(rs==1 | rw==1 | sa==1 | psp==1 | cw==1 & (cl==0 & ht<30)){
+    return(3)
+  }
+}
+```
+
+```{r}
+modelRating <- mapply(dang, dataSet$recentSnow, dataSet$recentWindLoading, dataSet$highTemp, dataSet$criricalLoading, dataSet$criticalWindLoading, dataSet$slabAvalanche, dataSet$psp)
+
+modelRating
+
+
+dataSet$modelRating <- modelRating
+```
+
+```{r}
+dataSet$uac <- as.numeric(dataSet$uac)
+
+str(dataSet)
+```
+
+```{r}
+comp <- function(uac, model){
+  if(model == uac){
+   return(0)
+  }
+  else if(model > uac){
+  return(1)
+  }
+  else if(model < uac){
+    return(2)
+  }
+}
 
 ```
+
+```{r}
+compair <- mapply(comp, dataSet$uac, dataSet$modelRating)
+
+tally(compair)
+
+dataSet$compair <- compair 
+
+```
+
+
+```{r}
+
+ggplot(dataSet, aes(compair)) +
+  geom_bar(fill = "#0073C2FF")
+```
+
+
