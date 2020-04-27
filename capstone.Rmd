@@ -1,7 +1,7 @@
 ---
 title: "Senior Capstone"
-author: "Hassan Rao"
-date: "2/24/2020"
+author: "Hassan Rao and Anna Marno"
+date: "4/26/2020"
 output: html_document
 ---
 
@@ -24,6 +24,7 @@ library(rpart.plot)
 library(MASS)
 library(gbm)
 library(readr)
+library(dplyr)
 ```
 
 
@@ -31,7 +32,7 @@ library(readr)
 
 ```{r}
 dataSet <- read_csv("Avalanche Project - Sheet1.csv", 
-    col_types = cols(criricalLoading = col_factor(levels = c("0","1")), 
+    col_types = cols(criticalLoading = col_factor(levels = c("0","1")), 
                      criticalWindLoading = col_factor(levels = c("0","1")), 
                      date = col_date(format = "%m/%d/%Y"), 
                      highTemp = col_integer(), 
@@ -40,18 +41,18 @@ dataSet <- read_csv("Avalanche Project - Sheet1.csv",
                     recentWindLoading = col_factor(levels = c("0", "1")), 
                     slabAvalanche = col_factor(levels = c("0","1")),
                     uac = col_factor(levels = c("1", "2", "3", "4"))))
-View(dataSet)
-```
-### Removing the date column
-
-```{r}
-within(dataSet, rm(date))
 ```
 
 ```{r}
 str(dataSet)
 ```
+```{r}
+dataSet <- within(dataSet, rm(date))
+```
 
+```{r}
+str(dataSet)
+```
 ## Classification Trees
 
 ```{r}
@@ -67,7 +68,7 @@ names(dataSet)
 ```
 
 ```{r}
-avalanche_fit <- train(uac ~ . - date, data = train_avalanche,
+avalanche_fit <- train(uac ~ ., data = train_avalanche,
                       method = "rpart")
 ```
 
@@ -80,7 +81,7 @@ avalanche_fit
 grid <- data.frame(cp = seq(from = 0, to = 0.25, by = 0.01))
 grid
 
-avalanche_fit2 <- train(uac ~ . - date, data = train_avalanche,
+avalanche_fit2 <- train(uac ~ ., data = train_avalanche,
                       tuneGrid = grid,
                       method = "rpart")
 avalanche_fit2
@@ -88,8 +89,6 @@ avalanche_fit2
 ```
 ```{r}
 ggplot(avalanche_fit2)
-
-
 ```
 ```{r}
 #final model has the best cp value
@@ -101,7 +100,7 @@ prp(avalanche_model)
 ```
 ```{r}
 #rpart.plot(avalanche_model)
-rpart.plot(avalanche_model,box.palette = "blue")
+rpart.plot(avalanche_model,box.palette = "green")
 ```
 ```{r}
 contrasts(train_avalanche$uac)
@@ -113,31 +112,9 @@ contrasts(train_avalanche$uac)
 tally( ~ uac, data = train_avalanche, margins = TRUE)
 ```
 
-## Regression Tree
-
 ```{r}
-set.seed(123)
-train_rows2 <- createDataPartition(dataSet$uac, p = 0.5, list = FALSE)
-train_avalanche2 <- dataSet[train_rows2, ]
-test_avalanche2 <- dataSet[-train_rows2, ]
-Avalanche_fit <- train(uac ~ . - date, data = train_avalanche2,
-                    tuneGrid = grid,
-                    method = "rpart")
-Avalanche_fit
-```
-```{r}
-ggplot(Avalanche_fit)
-```
-
-```{r}
-Avalanche_model <- Avalanche_fit$finalModel
-rpart.plot(Avalanche_model, box.palette = "green")
-```
-
-
-```{r}
-preds_Avalanche <- predict(Avalanche_fit, newdata = test_avalanche2)
-postResample(preds_Avalanche, test_avalanche2$uac)
+preds_Avalanche <- predict(avalanche_fit2, newdata = test_avalanche)
+confusionMatrix(preds_Avalanche, test_avalanche$uac)
 ```
 
 
@@ -145,11 +122,24 @@ postResample(preds_Avalanche, test_avalanche2$uac)
 
 ```{r}
 set.seed(123)
+train_rows2 <- createDataPartition(dataSet$uac, p = 0.8, list = FALSE)
+train_avalanche2 <- dataSet[train_rows2, ]
+test_avalanche2 <- dataSet[-train_rows2, ]
+Avalanche_fit <- train(uac ~ ., data = train_avalanche2,
+                    tuneGrid = grid,
+                    method = "rpart")
+
+
+```
+
+```{r}
+set.seed(123)
 Avalanche_fit_rf <- train(uac ~ ., data = train_avalanche2,
                        method = "rf",
                        trControl = trainControl(method = "none"),
-                       tuneGrid = data.frame(mtry = 9))
+                       tuneGrid = data.frame(mtry =7))
 ```
+
 ```{r}
 preds_Avalanche_rf <- predict(Avalanche_fit_rf, newdata = test_avalanche2)
 postResample(preds_Avalanche_rf, test_avalanche2$uac)
@@ -160,7 +150,7 @@ set.seed(123)
 Avalanche_fit_rf2 <- train(uac ~ ., data = train_avalanche2,
                         method = "rf",
                         trControl = trainControl(method = "none"),
-                        tuneGrid = data.frame(mtry = 9),
+                        tuneGrid = data.frame(mtry = 7),
                         ntree = 25)
 preds_Avalanche_rf2 <- predict(Avalanche_fit_rf2, newdata = test_avalanche2)
 postResample(preds_Avalanche_rf2, test_avalanche2$uac)
@@ -191,21 +181,6 @@ varImp(Avalanche_fit_rf3, scale = FALSE)
 ggplot(varImp(Avalanche_fit_rf3, scale = FALSE))
 ```
 
-## Boosting
-
-```{r}
-#Avlanche_fit_boost <-  train(uac ~ ., data = train_avalanche2,
-#                           method = "gbm",
-#                           trControl = trainControl(method = "none"),
-#                           tuneGrid = data.frame(n.trees = 1000,
-#                                                 interaction.depth = 3,
-#                                                 shrinkage = 0.001,
-#                                                 n.minobsinnode = 10),
-#                           verbose = FALSE)
-```
-
-
-
 ## Danger Rator function 
 
 ```{r}
@@ -226,17 +201,13 @@ dang<- function(rs, rw, ht, cl, cw, sa, psp){
 ```
 
 ```{r}
-modelRating <- mapply(dang, dataSet$recentSnow, dataSet$recentWindLoading, dataSet$highTemp, dataSet$criricalLoading, dataSet$criticalWindLoading, dataSet$slabAvalanche, dataSet$psp)
-
+modelRating <- mapply(dang, dataSet$recentSnow, dataSet$recentWindLoading, dataSet$highTemp, dataSet$criticalLoading, dataSet$criticalWindLoading, dataSet$slabAvalanche, dataSet$psp)
 modelRating
-
-
 dataSet$modelRating <- modelRating
 ```
 
 ```{r}
 dataSet$uac <- as.numeric(dataSet$uac)
-
 str(dataSet)
 ```
 
@@ -252,23 +223,17 @@ comp <- function(uac, model){
     return(2)
   }
 }
-
 ```
 
 ```{r}
 compair <- mapply(comp, dataSet$uac, dataSet$modelRating)
-
 tally(compair)
-
 dataSet$compair <- compair 
-
 ```
 
 
 ```{r}
-
 ggplot(dataSet, aes(compair)) +
   geom_bar(fill = "#0073C2FF")
 ```
-
 
